@@ -1,65 +1,180 @@
-import Image from "next/image";
+'use client';
+
+import { useState, useMemo } from 'react';
+import { Product, ProductFormData } from '@/lib/types';
+import { ProductCard } from '@/components/ProductCard';
+import { ProductForm } from '@/components/ProductForm';
+import { DeleteModal } from '@/components/DeleteModal';
+import { SearchBar } from '@/components/SearchBar';
+import { SortDropdown, SortOption } from '@/components/SortDropdown';
+import { useDebounce } from '@/hooks/useDebounce';
+import { Button } from '@/components/ui/button';
+import Link from 'next/link';
 
 export default function Home() {
+  const [products, setProducts] = useState<Product[]>([
+    { id: '1', name: 'Laptop Gaming', price: 15000000, stock: 5 },
+    { id: '2', name: 'Mouse Wireless', price: 250000, stock: 20 },
+    { id: '3', name: 'Keyboard Mechanical', price: 1200000, stock: 8 },
+  ]);
+  const [editingProduct, setEditingProduct] = useState<Product | null>(null);
+  const [deletingProduct, setDeletingProduct] = useState<Product | null>(null);
+  const [searchQuery, setSearchQuery] = useState('');
+  const [sortOption, setSortOption] = useState<SortOption>('default');
+  const [isLoading, setIsLoading] = useState(false);
+
+  // Debounce search query dengan delay 300ms
+  const debouncedSearch = useDebounce(searchQuery, 300);
+
+  // Filter dan sorting produk
+  const filteredAndSortedProducts = useMemo(() => {
+    let filtered = products;
+
+    // Pencarian case-sensitive
+    if (debouncedSearch) {
+      filtered = products.filter((p) => p.name.includes(debouncedSearch));
+    }
+
+    // Sorting
+    let sorted = [...filtered];
+    switch (sortOption) {
+      case 'price-asc':
+        sorted.sort((a, b) => a.price - b.price);
+        break;
+      case 'price-desc':
+        sorted.sort((a, b) => b.price - a.price);
+        break;
+      case 'stock-asc':
+        sorted.sort((a, b) => a.stock - b.stock);
+        break;
+      case 'stock-desc':
+        sorted.sort((a, b) => b.stock - a.stock);
+        break;
+      default:
+        break;
+    }
+
+    return sorted;
+  }, [products, debouncedSearch, sortOption]);
+
+  const handleSubmit = (data: ProductFormData) => {
+    if (editingProduct) {
+      // Update produk
+      setProducts(
+        products.map((p) =>
+          p.id === editingProduct.id
+            ? {
+                ...p,
+                name: data.name,
+                price: parseFloat(data.price),
+                stock: parseInt(data.stock),
+              }
+            : p
+        )
+      );
+      setEditingProduct(null);
+    } else {
+      // Tambah produk baru
+      const newProduct: Product = {
+        id: Date.now().toString(),
+        name: data.name,
+        price: parseFloat(data.price),
+        stock: parseInt(data.stock),
+      };
+      setProducts([...products, newProduct]);
+    }
+  };
+
+  const handleEdit = (product: Product) => {
+    setEditingProduct(product);
+  };
+
+  const handleDelete = (product: Product) => {
+    setDeletingProduct(product);
+  };
+
+  const confirmDelete = () => {
+    if (deletingProduct) {
+      setProducts(products.filter((p) => p.id !== deletingProduct.id));
+      setDeletingProduct(null);
+    }
+  };
+
+  const handleCancel = () => {
+    setEditingProduct(null);
+  };
+
   return (
-    <div className="flex min-h-screen items-center justify-center bg-zinc-50 font-sans dark:bg-black">
-      <main className="flex min-h-screen w-full max-w-3xl flex-col items-center justify-between py-32 px-16 bg-white dark:bg-black sm:items-start">
-        <Image
-          className="dark:invert"
-          src="/next.svg"
-          alt="Next.js logo"
-          width={100}
-          height={20}
-          priority
-        />
-        <div className="flex flex-col items-center gap-6 text-center sm:items-start sm:text-left">
-          <h1 className="max-w-xs text-3xl font-semibold leading-10 tracking-tight text-black dark:text-zinc-50">
-            To get started, edit the page.tsx file.
+    <div className="min-h-screen bg-gradient-to-br from-slate-50 to-slate-100">
+      <div className="container mx-auto px-4 py-8">
+        <div className="mb-8">
+          <h1 className="text-4xl font-bold text-gray-900 mb-2">
+            Manajemen Produk
           </h1>
-          <p className="max-w-md text-lg leading-8 text-zinc-600 dark:text-zinc-400">
-            Looking for a starting point or more instructions? Head over to{" "}
-            <a
-              href="https://vercel.com/templates?framework=next.js&utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-              className="font-medium text-zinc-950 dark:text-zinc-50"
-            >
-              Templates
-            </a>{" "}
-            or the{" "}
-            <a
-              href="https://nextjs.org/learn?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-              className="font-medium text-zinc-950 dark:text-zinc-50"
-            >
-              Learning
-            </a>{" "}
-            center.
+          <p className="text-gray-600">
+            Kelola produk Anda dengan mudah dan efisien
           </p>
+          <div className="mt-4">
+            <Link href="/pokemon">
+              <Button variant="outline">Lihat Data Pokemon API</Button>
+            </Link>
+          </div>
         </div>
-        <div className="flex flex-col gap-4 text-base font-medium sm:flex-row">
-          <a
-            className="flex h-12 w-full items-center justify-center gap-2 rounded-full bg-foreground px-5 text-background transition-colors hover:bg-[#383838] dark:hover:bg-[#ccc] md:w-[158px]"
-            href="https://vercel.com/new?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-            target="_blank"
-            rel="noopener noreferrer"
-          >
-            <Image
-              className="dark:invert"
-              src="/vercel.svg"
-              alt="Vercel logomark"
-              width={16}
-              height={16}
-            />
-            Deploy Now
-          </a>
-          <a
-            className="flex h-12 w-full items-center justify-center rounded-full border border-solid border-black/[.08] px-5 transition-colors hover:border-transparent hover:bg-black/[.04] dark:border-white/[.145] dark:hover:bg-[#1a1a1a] md:w-[158px]"
-            href="https://nextjs.org/docs?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-            target="_blank"
-            rel="noopener noreferrer"
-          >
-            Documentation
-          </a>
+
+        <ProductForm
+          products={products}
+          editingProduct={editingProduct}
+          onSubmit={handleSubmit}
+          onCancel={handleCancel}
+        />
+
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-6">
+          <SearchBar value={searchQuery} onChange={setSearchQuery} />
+          <SortDropdown value={sortOption} onChange={setSortOption} />
         </div>
-      </main>
+
+        {isLoading ? (
+          <div className="flex items-center justify-center py-20">
+            <div className="text-center">
+              <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-gray-900 mx-auto mb-4"></div>
+              <p className="text-gray-600">Memuat data...</p>
+            </div>
+          </div>
+        ) : filteredAndSortedProducts.length === 0 ? (
+          <div className="flex items-center justify-center py-20">
+            <div className="text-center">
+              <div className="text-6xl mb-4">📦</div>
+              <h3 className="text-xl font-semibold text-gray-700 mb-2">
+                {searchQuery ? 'Produk tidak ditemukan' : 'Belum ada produk'}
+              </h3>
+              <p className="text-gray-500">
+                {searchQuery
+                  ? 'Coba kata kunci pencarian yang berbeda'
+                  : 'Tambahkan produk pertama Anda menggunakan form di atas'}
+              </p>
+            </div>
+          </div>
+        ) : (
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
+            {filteredAndSortedProducts.map((product) => (
+              <ProductCard
+                key={product.id}
+                product={product}
+                onEdit={handleEdit}
+                onDelete={handleDelete}
+              />
+            ))}
+          </div>
+        )}
+
+        <DeleteModal
+          product={deletingProduct}
+          isOpen={!!deletingProduct}
+          onConfirm={confirmDelete}
+          onCancel={() => setDeletingProduct(null)}
+        />
+      </div>
     </div>
   );
 }
+
